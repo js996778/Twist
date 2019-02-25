@@ -1,5 +1,7 @@
 #include "Node.h"
 
+#include <algorithm>
+
 #include "intern/Log.h"
 
 #include "NodeGraph.h"
@@ -19,6 +21,7 @@ void Node::addInput(const Str& name, float def) {
 }
 
 void Node::updateBuffer(float val) {
+	val = std::min(std::max(val, -1.0f), 1.0f);
 	m_buffer[m_bufferPos++ % TWEN_NODE_BUFFER_SIZE] = val;
 }
 

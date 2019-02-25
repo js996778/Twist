@@ -3,66 +3,86 @@
 
 #include "../NodeGraph.h"
 
+extern "C" {
+	#include "biquad.h"
+}
+
 class FilterNode : public Node {
 	TWEN_NODE(FilterNode, "Filter")
 public:
 	enum Filter {
 		LowPass = 0,
-		HighPass
+		HighPass,
+		BandPass,
+		AllPass,
+		Notch,
+		Peaking,
+		LowShelf,
+		HighShelf
 	};
 
-	FilterNode(float co=20, Filter filter=Filter::LowPass)
-		: Node(), cutOff(co), filter(filter)
+	FilterNode(float a=20, float b=0.0f, float c=0.0f, Filter filter=Filter::LowPass)
+		: Node(), filter(filter)
 	{
 		addInput("In"); // Input
-		addInput("CutOff"); // Cutoff
+		addInput("Freq"); // Cutoff/Frequency
+		addInput("Q/Res"); // Resonance/Q
+		addInput("Gain"); // Gain
+
+		params[0] = a;
+		params[1] = b;
+		params[2] = c;
 	}
 
 	Value sample(NodeGraph *graph) override {
-		float co = connected(1) ? in(1).value() : cutOff;
-		float _co = std::min(std::max(co, 20.0f), 20000.0f);
+		float freq  = connected(1) ? in(1).value() : params[0];
+		float resoq = connected(2) ? in(2).value() : params[1];
+		float gainv = connected(3) ? in(3).value() : params[2];
+
+		float frequency = std::min(std::max(freq, 20.0f), 16000.0f);
+		float resonQ = std::min(std::max(resoq, -100.0f), 100.0f);
+		float gain = std::min(std::max(gainv, 0.0f), 1.0f);
+
 		float _in = in(0).value();
 
+		int sr = int(graph->sampleRate());
 		switch (filter) {
-			case LowPass: {
-				if (_co > 0.0f) {
-					float dt = 1.0f / graph->sampleRate();
-					float a = dt / (dt + 1.0f / (2.0 * M_PI * _co));
-					_out = Utils::lerp(_out, _in, a);
-				} else {
-					_out = 0.0f;
-				}
-			} break;
-			case HighPass: {
-				float rc = 1.0f / (2.0f * M_PI * _co);
-				float a = rc / (rc + 1.0f / graph->sampleRate());
-
-				float result = a * (prev + _in);
-				prev = result - _in;
-
-				_out = result;
-			} break;
+			case LowPass: sf_lowpass(&m_state, sr, frequency, resonQ); break;
+			case HighPass: sf_highpass(&m_state, sr, frequency, resonQ); break;
+			case BandPass: sf_bandpass(&m_state, sr, frequency, resonQ); break;
+			case AllPass: sf_allpass(&m_state, sr, frequency, resonQ); break;
+			case Notch: sf_notch(&m_state, sr, frequency, resonQ); break;
+			case Peaking: sf_peaking(&m_state, sr, frequency, resonQ, gain); break;
+			case LowShelf: sf_lowshelf(&m_state, sr, frequency, resonQ, gain); break;
+			case HighShelf: sf_highshelf(&m_state, sr, frequency, resonQ, gain); break;
 		}
-		return Value(_out);
+
+		sf_sample_st in, out;
+		in.L = in.R = _in;
+		sf_biquad_process(&m_state, 1, &in, &out);
+
+		return Value((out.L + out.R) * 0.5f);
 	}
 
 	void save(JSON& json) override {
 		Node::save(json);
-		json["cutOff"] = cutOff;
+		json["params"] = params;
 		json["filter"] = int(filter);
 	}
 
 	void load(JSON json) override {
 		Node::load(json);
-		cutOff = json["cutOff"];
+		params[0] = json["params"][0];
+		params[1] = json["params"][1];
+		params[2] = json["params"][2];
 		filter = Filter(json["filter"].get<int>());
 	}
 
-	float cutOff;
 	Filter filter;
+	float params[3];
 
 private:
-	float _out, prev;
+	sf_biquad_state_st m_state;
 };
 
 #endif // TWEN_FILTER_NODE_H

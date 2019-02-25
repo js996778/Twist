@@ -35,7 +35,7 @@ public:
 		}
 		m_envelope = std::max(m_envelope, 1.0f);
 
-		return Value(std::min(std::max(input * 0.6f / m_envelope, -1.0f), 1.0f));
+		return Value(std::min(std::max(input * 0.6f / (m_envelope + 0.0001f), -1.0f), 1.0f));
 	}
 
 	void save(JSON& json) override {

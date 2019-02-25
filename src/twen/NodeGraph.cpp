@@ -37,6 +37,7 @@ Node* NodeGraph::add(Node *node) {
 void NodeGraph::remove(Node *node) {
 	if (node == nullptr) return;
 
+	m_lock.lock();
 	auto pos = std::find_if(
 		m_nodes.begin(),
 		m_nodes.end(),
@@ -64,6 +65,7 @@ void NodeGraph::remove(Node *node) {
 
 		m_nodes.erase(pos);
 	}
+	m_lock.unlock();
 }
 
 Connection* NodeGraph::getConnection(Node *node) {
@@ -101,6 +103,7 @@ Connection* NodeGraph::connect(Node *from, Node *to, u32 slot) {
 void NodeGraph::disconnect(Connection *conn) {
 	if (conn == nullptr) return;
 
+	m_lock.lock();
 	auto pos = std::find_if(
 		m_connections.begin(),
 		m_connections.end(),
@@ -113,6 +116,7 @@ void NodeGraph::disconnect(Connection *conn) {
 		conn->to->m_inputs[conn->toSlot].connected = false;
 		m_connections.erase(pos);
 	}
+	m_lock.unlock();
 }
 
 float NodeGraph::sample() {

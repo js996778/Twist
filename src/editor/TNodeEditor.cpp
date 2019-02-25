@@ -5,6 +5,7 @@
 #include <fstream>
 #include <cmath>
 #include <algorithm>
+#include <numeric>
 
 #include <filesystem>
 namespace fs = std::filesystem;
@@ -357,6 +358,9 @@ void TNodeEditor::drawNodeGraph(TNodeGraph* graph) {
 		TNode* no = graph->m_tnodes[conn->to].get();
 		if (ni == nullptr || no == nullptr) continue;
 
+		ni->anim -= (1.0f / 60.0f) * 0.01f;
+		if (ni->anim < 0.0f) ni->anim = 0.0f;
+
 		ImVec2 p1 = offset + ni->pos(0, slotRadius, m_snapToGrid, true);
 		ImVec2 p2 = offset + no->pos(conn->toSlot, slotRadius, m_snapToGrid);
 		if (ni->open) p1.y += nodeTitleBarBgHeight;
@@ -375,11 +379,21 @@ void TNodeEditor::drawNodeGraph(TNodeGraph* graph) {
 		draw_list->AddCircleFilled(p2, NODE_SLOT_RADIUS2(scl), IM_COL32(200, 200, 100, 255));
 		draw_list->AddBezierCurve(p1, cp1, cp2, p2, IM_COL32(200, 200, 100, 255), thick);
 
+		draw_list->AddBezierCurve(p1, cp1, cp2, p2, IM_COL32(200, 200, 100, 128), NODE_SLOT_RADIUS2(scl) * ni->anim);
+
+		float buf = std::accumulate(
+					ni->node->buffer().begin(),
+					ni->node->buffer().end(),
+					0.0f
+		);
+		buf = std::min(std::max(buf, -1.0f), 1.0f);
+		ni->anim = buf * 2.0f - 1.0f;
+
 		if (mustCheckForNearestLink && nearestConn == nullptr && cullLink.Contains(io.MousePos)) {
 			const float d = GetSquaredDistanceToBezierCurve(io.MousePos, p1, cp1, cp2, p2);
 			if (d < hoveredLinkDistSqrThres) {
 				nearestConn = conn.get();
-				draw_list->AddBezierCurve(p1, cp1, cp2, p2, IM_COL32(250, 200, 100, 128), thick*4);
+				draw_list->AddBezierCurve(p1, cp1, cp2, p2, IM_COL32(255, 200, 100, 150), thick*4);
 			}
 		}
 	}
@@ -455,10 +469,12 @@ void TNodeEditor::drawNodeGraph(TNodeGraph* graph) {
 				}
 				ImGui::SameLine();
 				if (ImGui::Button("X", ImVec2(15, 15))) {
+					m_lock.lock();
 					toDelete.push_back(node);
 					m_hoveredNode = nullptr;
 					m_activeNode = nullptr;
 					saveBackup();
+					m_lock.unlock();
 				}
 				if (ImGui::IsItemHovered()) {
 					ImGui::SetTooltip("Delete");

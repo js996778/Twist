@@ -14,6 +14,7 @@
 
 using TNodeGUI = std::function<void(Node*)>;
 struct TNode {
+	float anim {0.0f};
 	ImVec4 bounds;
 	ImRect selectionBounds;
 	ImVec2 gridPos;
@@ -73,6 +74,7 @@ protected:
 	std::mutex m_lock;
 
 	Map<Node*, Ptr<TNode>> m_tnodes;
+	TNode *m_outNode;
 
 	ImVec2 m_scrolling;
 

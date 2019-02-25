@@ -17,6 +17,8 @@ if (DEFINED MSVC_VERSION)
 	endif()
 endif()
 
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/intern/sndfilter")
+
 set (SSE_COMPILE_FLAGS "")
 option(TWEN_USE_SSE "Use SSE2/3 Instructions where possible." ON)
 if (TWEN_USE_SSE)
@@ -76,10 +78,8 @@ file(GLOB SRC
 	"intern/*.h"
 	"intern/*.cpp"
 	"intern/*.hpp"
-	"intern/termcolor/*.hpp"
+        "intern/termcolor/*.hpp"
 )
-
-add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/intern/sndfilter")
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SRC})
 

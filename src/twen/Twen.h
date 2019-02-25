@@ -65,7 +65,9 @@ namespace Twen {
 
 		NodeBuilder::registerType<FilterNode>("Effects", TWEN_NODE_FAC {
 			return new FilterNode(
-				GET(float, "cut", 0.0f),
+				GET(float, "a", 0.0f),
+				GET(float, "b", 0.0f),
+				GET(float, "c", 0.0f),
 				(FilterNode::Filter) GET(int, "filter", 0)
 			);
 		});

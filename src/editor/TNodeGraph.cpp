@@ -18,8 +18,8 @@ TNodeGraph::TNodeGraph(NodeGraph* ang, int outX, int outY) {
 
 	JSON json;
 	json["gain"] = 1.0f;
-	TNode *out = addNode(outX, outY, "OutNode", json, false);
-	out->closeable = false;
+	m_outNode = addNode(outX, outY, "OutNode", json, false);
+	m_outNode->closeable = false;
 }
 
 TNode* TNodeGraph::addNode(int x, int y,
@@ -180,12 +180,6 @@ void TNodeGraph::fromJSON(JSON json) {
 
 	m_undoRedo.reset(new TUndoRedo());
 
-	TNode* outNode = m_tnodes.begin()->second.get();
-	outNode->bounds.x = json["outPos"][0];
-	outNode->bounds.y = json["outPos"][1];
-	outNode->gridPos.x = json["outPos"][0];
-	outNode->gridPos.y = json["outPos"][1];
-
 	// Load the samples
 	JSON samples = json["samples"];
 	if (samples.is_array()) {
@@ -205,7 +199,7 @@ void TNodeGraph::fromJSON(JSON json) {
 	Map<u32, TNode*> idnodeMap;
 	if (!nodes.is_array()) return;
 
-	idnodeMap[0] = outNode;
+	idnodeMap[0] = m_outNode;
 
 	u32 nodeID = 1;
 	for (u32 i = 0; i < nodes.size(); i++) {
@@ -234,14 +228,18 @@ void TNodeGraph::fromJSON(JSON json) {
 		u32 slot = conn["slot"];
 		connect(from, to, slot, false);
 	}
+
+	m_outNode->bounds.x = json["outPos"][0];
+	m_outNode->bounds.y = json["outPos"][1];
+	m_outNode->gridPos.x = json["outPos"][0];
+	m_outNode->gridPos.y = json["outPos"][1];
 }
 
 void TNodeGraph::toJSON(JSON& json) {
 	json["title"] = m_name;
 	json["scroll"] = { m_scrolling.x, m_scrolling.y };
 
-	TNode* outNode = m_tnodes.begin()->second.get();
-	json["outPos"] = { outNode->gridPos.x, outNode->gridPos.y };
+	json["outPos"] = { m_outNode->gridPos.x, m_outNode->gridPos.y };
 
 	json["bpm"] = m_actualNodeGraph->bpm();
 	json["bars"] = m_actualNodeGraph->bars();
